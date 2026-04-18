@@ -17,3 +17,7 @@ testpub:
 	rm -fr dist
 	uv build
 	uv run twine upload --repository testpypi dist/*
+
+
+gui-test:
+	PYAUTOGUI_RUN_GUI_TESTS=1 uv run python -m pytest --cov tests/test_gui.py
