@@ -39,6 +39,9 @@ dependencies = [
 dev = [
     "pillow",
     "pytest",
+    "pytest-cov",
+    "pytest-socket",
+    "ruff",
     "twine",
 ]
 
@@ -56,8 +59,37 @@ include = ["pyautogui*"]
 [tool.setuptools.dynamic]
 version = { attr = "pyautogui.__version__" }
 
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+
+fixable = ["ALL"]
+unfixable = []
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
 [tool.pytest.ini_options]
 minversion = "6.0"
+addopts = "-ra -q --disable-socket"
 testpaths = [
     "tests",
 ]
+
+[tool.coverage.run]
+source = ["pyautogui"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

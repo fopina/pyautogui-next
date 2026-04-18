@@ -11,15 +11,19 @@ from collections import namedtuple
 
 import pyautogui
 
+import pytest
+
+GUI_TEST = pytest.mark.skipif(
+    os.environ.get('PYAUTOGUI_RUN_GUI_TESTS') != '1',
+    reason='GUI and interactive tests are disabled unless PYAUTOGUI_RUN_GUI_TESTS=1',
+)
+
 # Make the cwd the folder that this test_pyautogui.py file resides in:
 scriptFolder = os.path.dirname(os.path.realpath(__file__))
 os.chdir(scriptFolder)
 
 
-if runningOnPython2:
-    INPUT_FUNC = raw_input
-else:
-    INPUT_FUNC = input
+INPUT_FUNC = input
 
 
 try:
@@ -84,10 +88,11 @@ class P(namedtuple("P", ["x", "y"])):
     def __pos__(self):
         return self
 
-    def __neg__(self):
+    def __pos__(self):
         return P(abs(self.x), abs(self.y))
 
 
+@GUI_TEST
 class TestGeneral(unittest.TestCase):
     def setUp(self):
         self.oldFailsafeSetting = pyautogui.FAILSAFE
@@ -261,6 +266,8 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(pyautogui._normalizeXYArgs((1, 2), None), pyautogui.Point(x=1, y=2))
         self.assertEqual(pyautogui._normalizeXYArgs([1, 2], None), pyautogui.Point(x=1, y=2))
 
+    @GUI_TEST
+    def test__normalizeXYArgs_image_lookup(self):
         pyautogui.useImageNotFoundException()
         with self.assertRaises(pyautogui.ImageNotFoundException):
             pyautogui._normalizeXYArgs("100x100blueimage.png", None)
@@ -273,6 +280,7 @@ class TestDoctests(unittest.TestCase):
         doctest.testmod(pyautogui)
 
 
+@GUI_TEST
 class TestMouse(unittest.TestCase):
     # NOTE - The user moving the mouse during many of these tests will cause them to fail.
 
@@ -656,6 +664,7 @@ class HoldThread(threading.Thread):
                 pass
 
 
+@GUI_TEST
 class TestKeyboard(unittest.TestCase):
     # NOTE: The terminal window running this script must be in focus during the keyboard tests.
     # You cannot run this as a scheduled task or remotely.
@@ -806,6 +815,7 @@ class TestKeyboard(unittest.TestCase):
             self.assertFalse(pyautogui.isShiftCharacter(char))
 
 
+@GUI_TEST
 class TestFailSafe(unittest.TestCase):
     def test_failsafe(self):
         self.oldFailsafeSetting = pyautogui.FAILSAFE
@@ -843,6 +853,7 @@ class TestFailSafe(unittest.TestCase):
         pyautogui.FAILSAFE = self.oldFailsafeSetting
 
 
+@GUI_TEST
 class TestPyScreezeFunctions(unittest.TestCase):
     def test_locateFunctions(self):
         # TODO - for now, we only test that the "return None" and "raise pyautogui.ImageNotFoundException" is raised.
