@@ -1,0 +1,19 @@
+name: 👷 publish dev
+
+on:
+  push:
+    branches:
+      - dev
+      - dev/*
+      - dev-*
+
+jobs:
+  test_and_publish:
+    uses: ./.github/workflows/publish.yml
+    with:
+      version: '${{ github.run_number }}.0.0'
+      repository: testpypi
+    secrets:
+      twine_token: ${{ secrets.TESTPYPI_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
