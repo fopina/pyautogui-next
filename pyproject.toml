@@ -3,11 +3,26 @@ requires = ["setuptools>=69.5.0,<80.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "PyAutoGUI"
+name = "pyautogui-next"
 authors = [{ name = "Al Sweigart", email = "al@inventwithpython.com" }]
 dynamic = ["version"]
-description = "PyAutoGUI lets Python control the mouse and keyboard, and other GUI automation tasks."
-readme = "README.md"
+description = "PyAutoGUI lets Python control the mouse and keyboard, and other GUI automation tasks. For Windows, macOS, and Linux, on Python 3 and 2."
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { text = "BSD" }
+keywords = ["gui", "automation", "test", "testing", "keyboard", "mouse", "cursor", "click", "press", "keystroke", "control"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
 requires-python = ">=3.10"
 dependencies = [
     'pyobjc-core; platform_system == "Darwin"',
@@ -32,6 +47,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/fopina/pyautogui-next"
 Repository = "https://github.com/fopina/pyautogui-next"
+Documentation = "https://pyautogui.readthedocs.org"
 
 [tool.setuptools]
 include-package-data = true

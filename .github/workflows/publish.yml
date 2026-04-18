@@ -67,8 +67,8 @@ jobs:
             INDEX=" -i ${{ inputs.repository }}"
           fi
           cat <<EOF >> ${GITHUB_STEP_SUMMARY}
-          \`PyAutoGUI\` uploaded to ${{ inputs.repository }}
+          \`pyautogui-next\` uploaded to ${{ inputs.repository }}
           \`\`\`
-          pip install${INDEX} PyAutoGUI==${{ inputs.version }}
+          pip install${INDEX} pyautogui-next==${{ inputs.version }}
           \`\`\`
           EOF
