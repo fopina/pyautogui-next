@@ -6,6 +6,8 @@
 [![Current version on PyPI](https://img.shields.io/pypi/v/pyautogui-next)](https://pypi.org/project/pyautogui-next/)
 [![Downloads](https://img.shields.io/pypi/dm/pyautogui-next)](https://pypistats.org/packages/pyautogui-next)
 
+This is a hard fork of the original PyAutoGUI project, created to continue supporting it and to add new features. All credit for the original project goes to Al Sweigart.
+
 Fork of PyAutoGUI, packaged and published as `pyautogui-next` while keeping the import package as `pyautogui`.
 
 PyAutoGUI is a  cross-platform GUI automation Python module for human beings. Used to programmatically control the mouse & keyboard.
