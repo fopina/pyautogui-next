@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69.5.0,<80.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyAutoGUI"
+authors = [{ name = "Al Sweigart", email = "al@inventwithpython.com" }]
+dynamic = ["version"]
+description = "PyAutoGUI lets Python control the mouse and keyboard, and other GUI automation tasks."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    'pyobjc-core; platform_system == "Darwin"',
+    'pyobjc-framework-quartz; platform_system == "Darwin"',
+    'python3-Xlib; platform_system == "Linux" and python_version >= "3.0"',
+    'python-xlib; platform_system == "Linux" and python_version < "3.0"',
+    'pymsgbox',
+    'pytweening>=1.0.4',
+    'pyscreeze>=0.1.21',
+    'pygetwindow>=0.0.5',
+    'mouseinfo',
+]
+
+[dependency-groups]
+dev = [
+    "build",
+    "pillow",
+    "pytest",
+    "twine",
+]
+
+[project.urls]
+Homepage = "https://github.com/fopina/pyautogui-next"
+Repository = "https://github.com/fopina/pyautogui-next"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["pyautogui*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pyautogui.__version__" }
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
