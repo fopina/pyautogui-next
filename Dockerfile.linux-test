@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_LINK_MODE=copy \
+    UV_SYSTEM_PYTHON=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        make \
+        scrot \
+        xauth \
+        xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /workspace
+
+COPY pyproject.toml uv.lock README.md ./
+
+RUN uv sync --dev --no-install-project
+
+COPY AUTHORS.txt CHANGES.txt LICENSE.txt MANIFEST.in Makefile ./
+COPY pyautogui ./pyautogui
+COPY tests ./tests
+
+RUN uv sync --dev
+
+CMD ["make", "test"]

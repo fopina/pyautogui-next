@@ -51,6 +51,24 @@ The main runtime/import package remains `pyautogui`. Extra development dependenc
 * pymsgbox
 * pytweening
 
+Linux tests from macOS with Docker
+==================================
+
+If you want to run the Linux test environment locally while developing on macOS, use Docker:
+
+```bash
+make test-linux
+```
+
+This builds `Dockerfile.linux-test`, copies the project into the image, caches dependency installation from `pyproject.toml` and `uv.lock`, and runs the same default `make test` target used by CI without touching your local macOS `.venv`.
+
+If you want an interactive shell in the Linux container instead of running the test target directly:
+
+```bash
+docker build -f Dockerfile.linux-test -t pyautogui-next-test-linux .
+docker run --rm -it --entrypoint bash pyautogui-next-test-linux
+```
+
 Example Usage
 =============
 

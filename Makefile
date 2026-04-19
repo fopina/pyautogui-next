@@ -13,6 +13,10 @@ test:
 		uv run python -m pytest --cov; \
 	fi
 
+test-linux:
+	docker build -f Dockerfile.linux-test -t pyautogui-next-test-linux .
+	docker run --rm pyautogui-next-test-linux
+
 testpub:
 	rm -fr dist
 	uv build
