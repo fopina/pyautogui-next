@@ -1,6 +1,8 @@
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
+    PYAUTOGUI_RUN_GUI_TESTS=1 \
+    XDG_SESSION_TYPE=x11 \
     UV_LINK_MODE=copy \
     UV_SYSTEM_PYTHON=1
 
@@ -30,4 +32,4 @@ COPY tests ./tests
 
 RUN uv sync --dev
 
-CMD ["make", "test"]
+CMD ["xvfb-run", "-a", "make", "gui-test"]
