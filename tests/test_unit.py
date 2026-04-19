@@ -4,9 +4,11 @@ import doctest
 import random
 import unittest
 
-import pyautogui
+from test_common import GUI_TEST, install_headless_stubs
 
-from test_common import GUI_TEST
+install_headless_stubs()
+
+import pyautogui
 
 
 class TestHelperFunctions(unittest.TestCase):

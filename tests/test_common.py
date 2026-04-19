@@ -1,6 +1,8 @@
 from __future__ import division, print_function
 
 import os
+import sys
+import types
 from collections import namedtuple
 
 import pytest
@@ -56,3 +58,10 @@ class P(namedtuple('P', ['x', 'y'])):
 
     def __abs__(self):
         return P(abs(self.x), abs(self.y))
+
+
+def install_headless_stubs():
+    if 'mouseinfo' not in sys.modules:
+        stub = types.ModuleType('mouseinfo')
+        stub.MouseInfoWindow = lambda *args, **kwargs: None
+        sys.modules['mouseinfo'] = stub
