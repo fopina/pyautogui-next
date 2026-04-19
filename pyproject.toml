@@ -27,7 +27,7 @@ requires-python = ">=3.9"
 dependencies = [
     'pyobjc-core; platform_system == "Darwin"',
     'pyobjc-framework-quartz; platform_system == "Darwin"',
-    'python-Xlib; platform_system == "Linux"',
+    'python-Xlib>=0.16; platform_system == "Linux"',
     'pymsgbox',
     'pytweening>=1.0.4',
     'pyscreeze>=0.1.21',
