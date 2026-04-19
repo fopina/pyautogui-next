@@ -14,7 +14,7 @@ test:
 	fi
 
 test-linux:
-	docker build -f Dockerfile.linux-test -t pyautogui-next-test-linux .
+	docker build -f tests/Dockerfile.linux-test -t pyautogui-next-test-linux .
 	docker run --rm pyautogui-next-test-linux
 
 testpub:

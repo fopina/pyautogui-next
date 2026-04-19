@@ -19,11 +19,12 @@ RUN pip install --no-cache-dir uv
 
 WORKDIR /workspace
 
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml ./
+COPY pyautogui/__init__.py ./pyautogui/__init__.py
 
 RUN uv sync --dev --no-install-project
 
-COPY AUTHORS.txt CHANGES.txt LICENSE.txt MANIFEST.in Makefile ./
+COPY Makefile ./
 COPY pyautogui ./pyautogui
 COPY tests ./tests
 
