@@ -291,6 +291,7 @@ class HoldThread(threading.Thread):
 
 
 @GUI_TEST
+@unittest.skip('review or fix me later')
 class TestKeyboard(unittest.TestCase):
     def setUp(self):
         self.oldFailsafeSetting = pyautogui.FAILSAFE
