@@ -6,6 +6,7 @@ lint-check:
 	uv run ruff format --diff
 	uv run ruff check
 
+.PHONY: test
 test:
 	if [ -n "$(GITHUB_RUN_ID)" ]; then \
 		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
@@ -25,8 +26,4 @@ testpub:
 
 gui-test: export PYAUTOGUI_RUN_GUI_TESTS=1
 gui-test:
-	if [ -n "$(GITHUB_RUN_ID)" ]; then \
-		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
-	else \
-	 	uv run python -m pytest tests/test_gui.py --cov; \
-	fi
+	make test
