@@ -24,4 +24,4 @@ testpub:
 
 
 gui-test:
-	PYAUTOGUI_RUN_GUI_TESTS=1 uv run python -m pytest --cov tests/test_gui.py
+	PYAUTOGUI_RUN_GUI_TESTS=1 uv run python -m pytest tests/test_gui.py --cov
