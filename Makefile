@@ -23,5 +23,10 @@ testpub:
 	uv run twine upload --repository testpypi dist/*
 
 
+gui-test: export PYAUTOGUI_RUN_GUI_TESTS=1
 gui-test:
-	PYAUTOGUI_RUN_GUI_TESTS=1 uv run python -m pytest tests/test_gui.py --cov
+	if [ -n "$(GITHUB_RUN_ID)" ]; then \
+		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
+	else \
+	 	uv run python -m pytest tests/test_gui.py --cov; \
+	fi
