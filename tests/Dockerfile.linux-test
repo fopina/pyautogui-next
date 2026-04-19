@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYAUTOGUI_RUN_GUI_TESTS=1 \
+    XDG_SESSION_TYPE=x11 \
+    UV_LINK_MODE=copy \
+    UV_SYSTEM_PYTHON=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        make \
+        scrot \
+        xauth \
+        xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /workspace
+
+COPY pyproject.toml ./
+COPY pyautogui/__init__.py ./pyautogui/__init__.py
+
+RUN uv sync --dev --no-install-project
+
+COPY Makefile ./
+COPY pyautogui ./pyautogui
+COPY tests ./tests
+
+RUN uv sync --dev
+
+CMD ["xvfb-run", "-a", "make", "gui-test"]

@@ -1,9 +1,12 @@
 from __future__ import division, print_function
 
 import os
+import signal
 import sys
+import threading
 import types
 from collections import namedtuple
+from queue import Queue
 
 import pytest
 
@@ -16,7 +19,44 @@ GUI_TEST = pytest.mark.skipif(
     reason='GUI and interactive tests are disabled unless PYAUTOGUI_RUN_GUI_TESTS=1',
 )
 
-INPUT_FUNC = input
+INPUT_TIMEOUT = float(os.environ.get('PYAUTOGUI_INPUT_TIMEOUT', '1'))
+
+
+def _timed_input(prompt=''):
+    if hasattr(signal, 'SIGALRM') and threading.current_thread() is threading.main_thread():
+
+        def handle_timeout(signum, frame):
+            raise TimeoutError('Timed out waiting for interactive test input after {} seconds'.format(INPUT_TIMEOUT))
+
+        previous_handler = signal.signal(signal.SIGALRM, handle_timeout)
+        signal.setitimer(signal.ITIMER_REAL, INPUT_TIMEOUT)
+        try:
+            return input(prompt)
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+
+    result = Queue(maxsize=1)
+
+    def reader():
+        try:
+            result.put((True, input(prompt)))
+        except BaseException as exc:  # pragma: no cover - only exercised on input failure paths.
+            result.put((False, exc))
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+    thread.join(INPUT_TIMEOUT)
+    if thread.is_alive():
+        raise TimeoutError('Timed out waiting for interactive test input after {} seconds'.format(INPUT_TIMEOUT))
+
+    ok, value = result.get()
+    if ok:
+        return value
+    raise value
+
+
+INPUT_FUNC = _timed_input
 
 
 class P(namedtuple('P', ['x', 'y'])):

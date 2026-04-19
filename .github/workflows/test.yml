@@ -26,6 +26,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y scrot xauth xvfb
           pip install uv
           uv sync --dev
 
@@ -36,9 +38,12 @@ jobs:
         run: |
           make lint-check
 
-      - name: Run unit tests
+      - name: Run GUI tests
+        env:
+          PYAUTOGUI_RUN_GUI_TESTS: "1"
+          XDG_SESSION_TYPE: x11
         run: |
-          make test
+          xvfb-run -a make gui-test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

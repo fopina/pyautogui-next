@@ -89,7 +89,7 @@ line-ending = "auto"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --disable-socket --ignore=tests/test_gui.py --ignore=tests/test_pyautogui.py"
+addopts = "-ra -q --disable-socket"
 testpaths = [
     "tests",
 ]
