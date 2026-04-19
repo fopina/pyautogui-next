@@ -78,9 +78,11 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}
 
       - name: Upload test results to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}
           report_type: test_results
