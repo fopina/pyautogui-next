@@ -55,10 +55,12 @@ jobs:
         run: |
           xvfb-run -a make gui-test
 
-      - name: Run tests
+      - name: Run macOS and Windows GUI tests
         if: runner.os != 'Linux'
+        env:
+          PYAUTOGUI_RUN_GUI_TESTS: "1"
         run: |
-          make test
+          make gui-test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
