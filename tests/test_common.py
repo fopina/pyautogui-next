@@ -65,3 +65,11 @@ def install_headless_stubs():
         stub = types.ModuleType('mouseinfo')
         stub.MouseInfoWindow = lambda *args, **kwargs: None
         sys.modules['mouseinfo'] = stub
+
+
+HEADLESS_LINUX = sys.platform.startswith('linux') and not os.environ.get('DISPLAY')
+
+
+def require_gui_or_skip():
+    if HEADLESS_LINUX and os.environ.get('PYAUTOGUI_RUN_GUI_TESTS') != '1':
+        pytest.skip('GUI tests require a real DISPLAY on Linux', allow_module_level=True)
