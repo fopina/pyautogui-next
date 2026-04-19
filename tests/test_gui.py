@@ -7,7 +7,7 @@ import unittest
 
 import pyautogui
 
-from tests.test_common import GUI_TEST, INPUT_FUNC, P
+from test_common import GUI_TEST, INPUT_FUNC, P
 
 
 @GUI_TEST

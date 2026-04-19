@@ -6,7 +6,7 @@ import unittest
 
 import pyautogui
 
-from tests.test_common import GUI_TEST
+from test_common import GUI_TEST
 
 
 class TestHelperFunctions(unittest.TestCase):
