@@ -5,9 +5,9 @@ import threading
 import time
 import unittest
 
-import pyautogui
-
 from test_common import GUI_TEST, INPUT_FUNC, P, require_gui_or_skip
+
+import pyautogui
 
 require_gui_or_skip()
 

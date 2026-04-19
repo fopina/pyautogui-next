@@ -74,6 +74,13 @@ unfixable = []
 
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+[tool.ruff.lint.per-file-ignores]
+"docs/*.ipynb" = ["F821"]
+"pyautogui/*.py" = ["E721", "E722", "E711"]
+"pyautogui/__init__.py" = ["E402"]
+"tests/test_pyautogui.py" = ["E402"]
+"tests/test_unit.py" = ["E402"]
+
 [tool.ruff.format]
 quote-style = "single"
 indent-style = "space"

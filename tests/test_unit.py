@@ -169,7 +169,9 @@ class TestRun(unittest.TestCase):
         self.assertEqual(pyautogui._tokenizeCommandStr('d10,10'), ['d', '10', '10'])
         self.assertEqual(pyautogui._tokenizeCommandStr('d1,2g3,4'), ['d', '1', '2', 'g', '3', '4'])
         self.assertEqual(pyautogui._tokenizeCommandStr("w'hello'"), ['w', 'hello'])
-        self.assertEqual(pyautogui._tokenizeCommandStr("d1,2w'hello'g3,4"), ['d', '1', '2', 'w', 'hello', 'g', '3', '4'])
+        self.assertEqual(
+            pyautogui._tokenizeCommandStr("d1,2w'hello'g3,4"), ['d', '1', '2', 'w', 'hello', 'g', '3', '4']
+        )
         self.assertEqual(pyautogui._tokenizeCommandStr('s42'), ['s', '42'])
         self.assertEqual(pyautogui._tokenizeCommandStr('s42.3'), ['s', '42.3'])
         self.assertEqual(pyautogui._tokenizeCommandStr('f10(c)'), ['f', '10', ['c']])
