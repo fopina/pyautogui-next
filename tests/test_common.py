@@ -66,6 +66,24 @@ def install_headless_stubs():
         stub.MouseInfoWindow = lambda *args, **kwargs: None
         sys.modules['mouseinfo'] = stub
 
+    if HEADLESS_LINUX and 'pyautogui._pyautogui_x11' not in sys.modules:
+        stub = types.ModuleType('pyautogui._pyautogui_x11')
+        stub._size = lambda: (1920, 1080)
+        stub._position = lambda: (0, 0)
+        stub._moveTo = lambda x, y: None
+        stub._dragTo = lambda x, y, button=None: None
+        stub._click = lambda x, y, button='left': None
+        stub._mouseDown = lambda x, y, button='left': None
+        stub._mouseUp = lambda x, y, button='left': None
+        stub._scroll = lambda clicks, x=None, y=None: None
+        stub._hscroll = lambda clicks, x=None, y=None: None
+        stub._vscroll = lambda clicks, x=None, y=None: None
+        stub._keyDown = lambda key: None
+        stub._keyUp = lambda key: None
+        stub._mouse_is_swapped = lambda: False
+        stub.keyboardMapping = {chr(i): i for i in range(32, 127)}
+        sys.modules['pyautogui._pyautogui_x11'] = stub
+
 
 HEADLESS_LINUX = sys.platform.startswith('linux') and not os.environ.get('DISPLAY')
 
