@@ -205,6 +205,10 @@ class TestGuiAppIntegration(unittest.TestCase):
             self.assertEqual(event['state']['clicks'], 1)
             self.assertEqual(event['state']['status'], 'Button clicks: 1')
 
+    @unittest.skipIf(
+        os.environ.get('GITHUB_ACTIONS') == 'true' and sys.platform == 'darwin',
+        'need to add TCC configuration first',
+    )
     def test_locate_button_image_matches_button_coordinates(self):
         image_path = _locate_button_image_path()
         with GuiTestAppProcess() as app:
