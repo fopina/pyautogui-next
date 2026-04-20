@@ -16,7 +16,7 @@ test:
 
 test-linux:
 	docker build -f tests/Dockerfile.linux-test -t pyautogui-next-test-linux .
-	docker run --rm --init pyautogui-next-test-linux
+	docker run --rm --init -e PYAUTOGUI_LOCATE_BUTTON_IMAGE=linux-docker pyautogui-next-test-linux
 
 testpub:
 	rm -fr dist

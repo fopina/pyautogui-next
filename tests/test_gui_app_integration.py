@@ -30,6 +30,7 @@ LOCATE_CENTER_TOLERANCE = 10
 LOCATE_BUTTON_IMAGES = {
     'darwin': os.path.join(SCRIPT_FOLDER, 'click-target-button-darwin.png'),
     'linux': os.path.join(SCRIPT_FOLDER, 'click-target-button-linux.png'),
+    'linux-docker': os.path.join(SCRIPT_FOLDER, 'click-target-button-linux-docker.png'),
     'win32': os.path.join(SCRIPT_FOLDER, 'click-target-button-windows.png'),
 }
 LOCATE_BUTTON_FALLBACK_IMAGE = LOCATE_BUTTON_IMAGES['darwin']
@@ -168,7 +169,8 @@ def _raise_with_locate_debug_screenshot(error):
 
 
 def _locate_button_image_path():
-    image_path = LOCATE_BUTTON_IMAGES.get(sys.platform)
+    image_name = os.environ.get('PYAUTOGUI_LOCATE_BUTTON_IMAGE', sys.platform)
+    image_path = LOCATE_BUTTON_IMAGES.get(image_name)
     if image_path is None or not os.path.exists(image_path):
         image_path = LOCATE_BUTTON_FALLBACK_IMAGE
     if not os.path.exists(image_path):
