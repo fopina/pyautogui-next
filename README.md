@@ -33,6 +33,10 @@ macOS needs the pyobjc-core and pyobjc module installed (in that order).
 
 Linux needs the python3-xlib module installed.
 
+For non-Linux hosts that need remote X11 (TCP) connections, install the optional extra:
+
+`pip install "pyautogui-next[x11]"`
+
 Pillow needs to be installed, and on Linux you may need to install additional libraries to make sure Pillow's PNG/JPEG works correctly. See:
 
     https://stackoverflow.com/questions/7648200/pip-install-pil-e-tickets-1-no-jpeg-png-support

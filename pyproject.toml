@@ -37,6 +37,11 @@ dependencies = [
     'mouseinfo',
 ]
 
+[project.optional-dependencies]
+x11 = [
+    'python-Xlib>=0.16',
+]
+
 [dependency-groups]
 dev = [
     "pillow",
