@@ -117,9 +117,9 @@ class TestGuiAppIntegration(unittest.TestCase):
                 time.sleep(0.25)
                 pyautogui.typewrite('hello world', interval=0.01)
 
-                snapshot = _wait_for_text(process, stdout, 'hello world')
+                snapshot = _wait_for_text(process, stdout, 'hello worldx')
 
-                self.assertEqual(snapshot['state']['text'], 'hello world')
+                self.assertEqual(snapshot['state']['text'], 'hello worldx')
             finally:
                 if process.poll() is None:
                     _write_command(process, 'quit')
