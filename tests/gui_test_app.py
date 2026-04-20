@@ -55,6 +55,7 @@ class GuiTestApp:
         self.status_var = tk.StringVar(value='Ready')
         self.entry_var = tk.StringVar()
         self.check_var = tk.BooleanVar(value=False)
+        self.click_target_image_path = self._write_click_target_image()
 
         self._build_ui()
         self._bind_events()
@@ -216,6 +217,7 @@ class GuiTestApp:
             'platform_system': platform.system(),
             'time': time.time(),
             'state': self.state(),
+            'assets': {'click_target_image': self.click_target_image_path},
             'widgets': {name: self.geometry(widget) for name, widget in widgets.items()},
         }
 
@@ -250,6 +252,35 @@ class GuiTestApp:
         payload = {'event': event, 'state': self.state()}
         payload.update(details)
         self.write_json(payload)
+
+    def _write_click_target_image(self) -> str:
+        if self.args.ready_file:
+            asset_dir = os.path.dirname(os.path.abspath(self.args.ready_file))
+        else:
+            asset_dir = tempfile.gettempdir()
+        os.makedirs(asset_dir, exist_ok=True)
+        path = os.path.join(asset_dir, 'click-target.ppm')
+        width = 72
+        height = 28
+        pixels = []
+        for y in range(height):
+            row = []
+            for x in range(width):
+                if x in (0, width - 1) or y in (0, height - 1):
+                    row.append((0, 0, 0))
+                elif (x // 8 + y // 7) % 2 == 0:
+                    row.append((255, 255, 255))
+                elif x > width // 2:
+                    row.append((0, 0, 0))
+                else:
+                    row.append((255, 255, 255))
+            pixels.append(row)
+
+        with open(path, 'wb') as image_file:
+            image_file.write(('P6\n{0} {1}\n255\n'.format(width, height)).encode('ascii'))
+            for row in pixels:
+                image_file.write(bytes(component for pixel in row for component in pixel))
+        return path
 
     def write_json(self, payload: dict[str, Any]) -> None:
         print(json.dumps(payload, sort_keys=True), flush=True)

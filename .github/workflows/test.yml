@@ -75,6 +75,14 @@ jobs:
         run: |
           make gui-test
 
+      - name: Upload GUI test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-test-screenshots-${{ matrix.os }}-${{ matrix.python-version }}
+          path: artifacts/gui-test-screenshots
+          if-no-files-found: ignore
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

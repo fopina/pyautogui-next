@@ -19,9 +19,16 @@ require_gui_or_skip()
 
 
 APP_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app.py')
+REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = 10
 SNAPSHOT_TIMEOUT = 5
 TYPE_TIMEOUT = 5
+LOCATE_TIMEOUT = 5
+LOCATE_CENTER_TOLERANCE = 10
+LOCATE_SCREENSHOT_DIR = os.environ.get(
+    'PYAUTOGUI_LOCATE_SCREENSHOT_DIR',
+    os.path.join(REPO_ROOT, 'artifacts', 'gui-test-screenshots'),
+)
 
 
 class GuiTestAppProcess:
@@ -117,6 +124,39 @@ def _wait_for_text(process, stdout, expected):
     raise AssertionError('Timed out waiting for input text {0!r}. Last text: {1!r}'.format(expected, last_text))
 
 
+def _wait_for_located_center(image_path):
+    deadline = time.time() + LOCATE_TIMEOUT
+    last_error = None
+    while time.time() < deadline:
+        try:
+            center = pyautogui.locateCenterOnScreen(image_path)
+        except pyautogui.ImageNotFoundException as exc:
+            last_error = exc
+            center = None
+        if center is not None:
+            return center
+        time.sleep(0.1)
+    raise AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error))
+
+
+def _save_locate_debug_screenshot():
+    os.makedirs(LOCATE_SCREENSHOT_DIR, exist_ok=True)
+    timestamp = time.strftime('%Y%m%d-%H%M%S')
+    path = os.path.join(LOCATE_SCREENSHOT_DIR, 'locate-button-image-{0}.png'.format(timestamp))
+    pyautogui.screenshot().save(path)
+    return path
+
+
+def _raise_with_locate_debug_screenshot(error):
+    try:
+        screenshot_path = _save_locate_debug_screenshot()
+    except Exception as screenshot_error:
+        raise AssertionError(
+            '{0}\nUnable to save locate debug screenshot: {1!r}'.format(error, screenshot_error)
+        ) from error
+    raise AssertionError('{0}\nLocate debug screenshot: {1}'.format(error, screenshot_path)) from error
+
+
 @GUI_TEST
 class TestGuiAppIntegration(unittest.TestCase):
     def setUp(self):
@@ -147,3 +187,14 @@ class TestGuiAppIntegration(unittest.TestCase):
             self.assertEqual(event['widget'], 'click_target')
             self.assertEqual(event['state']['clicks'], 1)
             self.assertEqual(event['state']['status'], 'Button clicks: 1')
+
+    def test_locate_button_image_matches_button_coordinates(self):
+        with GuiTestAppProcess() as app:
+            click_target = app.ready['widgets']['click_target']
+            try:
+                located_center = _wait_for_located_center(app.ready['assets']['click_target_image'])
+
+                self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
+                self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
+            except AssertionError as exc:
+                _raise_with_locate_debug_screenshot(exc)
