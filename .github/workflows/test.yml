@@ -50,9 +50,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: |
-            3.12
-            ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
