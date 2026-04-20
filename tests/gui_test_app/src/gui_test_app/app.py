@@ -2,7 +2,7 @@
 
 Run it as a subprocess from tests through uvx:
 
-    uvx --python 3.10 --from tests/gui_test_app gui-test-app --ready-file /tmp/pyautogui-ready.json
+    uvx --python 3.12 --from tests/gui_test_app gui-test-app --ready-file /tmp/pyautogui-ready.json
 
 The app prints newline-delimited JSON events to stdout and accepts newline
 commands on stdin: ``snapshot``, ``clear``, or ``quit``. Commands may also be
@@ -217,6 +217,7 @@ class GuiTestApp:
             'pid': os.getpid(),
             'platform': sys.platform,
             'platform_system': platform.system(),
+            'python_version': platform.python_version(),
             'time': time.time(),
             'state': self.state(),
             'widgets': {name: self.geometry(widget) for name, widget in widgets.items()},

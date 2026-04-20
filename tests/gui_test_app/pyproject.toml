@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pyautogui-next-gui-test-app"
 version = "0.1.0"
 description = "GUI fixture app for pyautogui-next integration tests."
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
