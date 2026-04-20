@@ -24,6 +24,35 @@ SNAPSHOT_TIMEOUT = 5
 TYPE_TIMEOUT = 5
 
 
+class GuiTestAppProcess:
+    def __enter__(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        ready_file = os.path.join(self.tmpdir.name, 'ready.json')
+        self.process = subprocess.Popen(
+            [sys.executable, APP_PATH, '--ready-file', ready_file],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        self.stdout = _start_reader(self.process.stdout)
+        self.ready = _read_ready_file(ready_file, self.process)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            if self.process.poll() is None:
+                _write_command(self.process, 'quit')
+                try:
+                    self.process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.process.terminate()
+                    self.process.wait(timeout=2)
+        finally:
+            self.tmpdir.cleanup()
+
+
 def _read_lines(stream, output):
     for line in stream:
         output.put(line)
@@ -98,33 +127,23 @@ class TestGuiAppIntegration(unittest.TestCase):
         pyautogui.FAILSAFE = self.old_failsafe_setting
 
     def test_type_hello_world_in_input_text(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ready_file = os.path.join(tmpdir, 'ready.json')
-            process = subprocess.Popen(
-                [sys.executable, APP_PATH, '--ready-file', ready_file],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-            )
-            stdout = _start_reader(process.stdout)
+        with GuiTestAppProcess() as app:
+            text_input = app.ready['widgets']['text_input']
+            pyautogui.click(text_input['center_x'], text_input['center_y'])
+            time.sleep(0.25)
+            pyautogui.typewrite('hello world', interval=0.01)
 
-            try:
-                ready = _read_ready_file(ready_file, process)
-                text_input = ready['widgets']['text_input']
-                pyautogui.click(text_input['center_x'], text_input['center_y'])
-                time.sleep(0.25)
-                pyautogui.typewrite('hello world', interval=0.01)
+            snapshot = _wait_for_text(app.process, app.stdout, 'hello world')
 
-                snapshot = _wait_for_text(process, stdout, 'hello world')
+            self.assertEqual(snapshot['state']['text'], 'hello world')
 
-                self.assertEqual(snapshot['state']['text'], 'hello world')
-            finally:
-                if process.poll() is None:
-                    _write_command(process, 'quit')
-                    try:
-                        process.wait(timeout=2)
-                    except subprocess.TimeoutExpired:
-                        process.terminate()
-                        process.wait(timeout=2)
+    def test_click_button_increments_click_count(self):
+        with GuiTestAppProcess() as app:
+            click_target = app.ready['widgets']['click_target']
+            pyautogui.click(click_target['center_x'], click_target['center_y'])
+
+            event = _read_json_event(app.stdout, 'button_command', SNAPSHOT_TIMEOUT)
+
+            self.assertEqual(event['widget'], 'click_target')
+            self.assertEqual(event['state']['clicks'], 1)
+            self.assertEqual(event['state']['status'], 'Button clicks: 1')
