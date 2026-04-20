@@ -22,6 +22,9 @@ import threading
 import time
 from typing import Any
 
+READY_SETTLE_MS = 750
+TOPMOST_RELEASE_MS = 1500
+
 try:
     import tkinter as tk
     from tkinter import ttk
@@ -279,7 +282,18 @@ class GuiTestApp:
         self.root.lift()
         self.root.focus_force()
         self.entry.focus_force()
-        self.root.after(750, lambda: self.root.attributes('-topmost', False))
+        self.root.update_idletasks()
+        self.root.after(READY_SETTLE_MS, self.write_ready_snapshot_event)
+        self.root.after(TOPMOST_RELEASE_MS, self.release_topmost)
+
+    def release_topmost(self) -> None:
+        self.root.attributes('-topmost', False)
+
+    def write_ready_snapshot_event(self) -> None:
+        self.root.lift()
+        self.root.focus_force()
+        self.entry.focus_force()
+        self.root.update_idletasks()
         payload = {'event': 'ready', **self.snapshot()}
         self.write_ready_file(payload)
         self.write_json(payload)
