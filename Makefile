@@ -1,3 +1,5 @@
+.PHONY: lint lint-check test test-linux testpub gui-test
+
 lint:
 	uv run ruff format
 	uv run ruff check --fix
@@ -6,7 +8,6 @@ lint-check:
 	uv run ruff format --diff
 	uv run ruff check
 
-.PHONY: test
 test:
 	if [ -n "$(GITHUB_RUN_ID)" ]; then \
 		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
@@ -24,6 +25,8 @@ testpub:
 	uv run twine upload --repository testpypi dist/*
 
 
-gui-test: export PYAUTOGUI_RUN_GUI_TESTS=1
-gui-test:
-	make test
+test-gui: export PYAUTOGUI_RUN_GUI_TESTS=1
+test-gui: test
+
+test-docker-gui: export PYAUTOGUI_GUI_TEST_BACKEND=docker
+test-docker-gui: test-gui
