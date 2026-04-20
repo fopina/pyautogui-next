@@ -2158,9 +2158,5 @@ def getInfo():
 
 
 # Add the bottom left, top right, and bottom right corners to FAILSAFE_POINTS.
-try:
-    _right, _bottom = size()
-except Exception:
-    _right = _bottom = None
-else:
-    FAILSAFE_POINTS.extend([(0, _bottom - 1), (_right - 1, 0), (_right - 1, _bottom - 1)])
+_right, _bottom = size()
+FAILSAFE_POINTS.extend([(0, _bottom - 1), (_right - 1, 0), (_right - 1, _bottom - 1)])
