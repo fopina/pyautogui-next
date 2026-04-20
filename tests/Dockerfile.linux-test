@@ -12,6 +12,7 @@ RUN apt-get update \
         libjpeg62-turbo-dev \
         libpng-dev \
         make \
+        python3-tk \
         scrot \
         xauth \
         xvfb \

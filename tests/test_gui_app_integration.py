@@ -18,10 +18,26 @@ import pyautogui
 require_gui_or_skip()
 
 
-APP_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app.py')
-READY_TIMEOUT = 10
+APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
+DEFAULT_APP_PYTHON = '3.12'
+APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
+REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
+READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
 TYPE_TIMEOUT = 5
+LOCATE_TIMEOUT = 5
+LOCATE_CENTER_TOLERANCE = 10
+LOCATE_BUTTON_IMAGES = {
+    'darwin': os.path.join(SCRIPT_FOLDER, 'click-target-button-darwin.png'),
+    'linux': os.path.join(SCRIPT_FOLDER, 'click-target-button-linux.png'),
+    'linux-docker': os.path.join(SCRIPT_FOLDER, 'click-target-button-linux-docker.png'),
+    'win32': os.path.join(SCRIPT_FOLDER, 'click-target-button-windows.png'),
+}
+LOCATE_BUTTON_FALLBACK_IMAGE = LOCATE_BUTTON_IMAGES['darwin']
+LOCATE_SCREENSHOT_DIR = os.environ.get(
+    'PYAUTOGUI_LOCATE_SCREENSHOT_DIR',
+    os.path.join(REPO_ROOT, 'artifacts', 'gui-test-screenshots'),
+)
 
 
 class GuiTestAppProcess:
@@ -29,7 +45,17 @@ class GuiTestAppProcess:
         self.tmpdir = tempfile.TemporaryDirectory()
         ready_file = os.path.join(self.tmpdir.name, 'ready.json')
         self.process = subprocess.Popen(
-            [sys.executable, APP_PATH, '--ready-file', ready_file],
+            [
+                'uvx',
+                '--refresh',
+                '--python',
+                APP_PYTHON,
+                '--from',
+                APP_PROJECT_PATH,
+                'gui-test-app',
+                '--ready-file',
+                ready_file,
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -117,6 +143,51 @@ def _wait_for_text(process, stdout, expected):
     raise AssertionError('Timed out waiting for input text {0!r}. Last text: {1!r}'.format(expected, last_text))
 
 
+def _wait_for_located_center(image_path):
+    deadline = time.time() + LOCATE_TIMEOUT
+    last_error = None
+    while time.time() < deadline:
+        try:
+            center = pyautogui.locateCenterOnScreen(image_path)
+        except pyautogui.ImageNotFoundException as exc:
+            last_error = exc
+            center = None
+        if center is not None:
+            return center
+        time.sleep(0.1)
+    _raise_with_locate_debug_screenshot(
+        AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error))
+    )
+
+
+def _save_locate_debug_screenshot():
+    os.makedirs(LOCATE_SCREENSHOT_DIR, exist_ok=True)
+    timestamp = time.strftime('%Y%m%d-%H%M%S')
+    path = os.path.join(LOCATE_SCREENSHOT_DIR, 'locate-button-image-{0}.png'.format(timestamp))
+    pyautogui.screenshot().save(path)
+    return path
+
+
+def _raise_with_locate_debug_screenshot(error):
+    try:
+        screenshot_path = _save_locate_debug_screenshot()
+    except Exception as screenshot_error:
+        raise AssertionError(
+            '{0}\nUnable to save locate debug screenshot: {1!r}'.format(error, screenshot_error)
+        ) from error
+    raise AssertionError('{0}\nLocate debug screenshot: {1}'.format(error, screenshot_path)) from error
+
+
+def _locate_button_image_path():
+    image_name = os.environ.get('PYAUTOGUI_LOCATE_BUTTON_IMAGE', sys.platform)
+    image_path = LOCATE_BUTTON_IMAGES.get(image_name)
+    if image_path is None or not os.path.exists(image_path):
+        image_path = LOCATE_BUTTON_FALLBACK_IMAGE
+    if not os.path.exists(image_path):
+        pytest.skip('Missing locate-button screenshot fixture: {0}'.format(image_path))
+    return image_path
+
+
 @GUI_TEST
 class TestGuiAppIntegration(unittest.TestCase):
     def setUp(self):
@@ -125,6 +196,13 @@ class TestGuiAppIntegration(unittest.TestCase):
 
     def tearDown(self):
         pyautogui.FAILSAFE = self.old_failsafe_setting
+
+    def test_gui_app_uses_expected_python_version(self):
+        with GuiTestAppProcess() as app:
+            self.assertTrue(
+                app.ready['python_version'].startswith('3.12'),
+                'GUI test app used Python {0}, expected {1}.x'.format(app.ready['python_version'], '3.12'),
+            )
 
     def test_type_hello_world_in_input_text(self):
         with GuiTestAppProcess() as app:
@@ -147,3 +225,16 @@ class TestGuiAppIntegration(unittest.TestCase):
             self.assertEqual(event['widget'], 'click_target')
             self.assertEqual(event['state']['clicks'], 1)
             self.assertEqual(event['state']['status'], 'Button clicks: 1')
+
+    @unittest.skipIf(
+        os.environ.get('GITHUB_ACTIONS') == 'true' and sys.platform == 'darwin',
+        'need to add TCC configuration first',
+    )
+    def test_locate_button_image_matches_button_coordinates(self):
+        image_path = _locate_button_image_path()
+        with GuiTestAppProcess() as app:
+            click_target = app.ready['widgets']['click_target']
+            located_center = _wait_for_located_center(image_path)
+
+            self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
+            self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
