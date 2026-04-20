@@ -21,7 +21,6 @@ require_gui_or_skip()
 APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
 DEFAULT_APP_PYTHON = '3.12' if sys.platform == 'darwin' else sys.executable
 APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
-EXPECTED_APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_EXPECTED_PYTHON')
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
@@ -199,12 +198,10 @@ class TestGuiAppIntegration(unittest.TestCase):
         pyautogui.FAILSAFE = self.old_failsafe_setting
 
     def test_gui_app_uses_expected_python_version(self):
-        if not EXPECTED_APP_PYTHON:
-            pytest.skip('No expected GUI test app Python version configured')
         with GuiTestAppProcess() as app:
             self.assertTrue(
-                app.ready['python_version'].startswith(EXPECTED_APP_PYTHON + '.'),
-                'GUI test app used Python {0}, expected {1}.x'.format(app.ready['python_version'], EXPECTED_APP_PYTHON),
+                app.ready['python_version'].startswith('3.12'),
+                'GUI test app used Python {0}, expected {1}.x'.format(app.ready['python_version'], '3.12'),
             )
 
     def test_type_hello_world_in_input_text(self):
