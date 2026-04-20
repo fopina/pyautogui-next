@@ -16,3 +16,4 @@ build/
 
 Pipfile.lock
 uv.lock
+/artifacts

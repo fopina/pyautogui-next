@@ -141,11 +141,9 @@ class GuiTestAppProcess:
         )
 
 
-
 def _read_lines(stream, output):
     for line in stream:
         output.put(line)
-
 
 
 def _start_reader(stream):
@@ -153,7 +151,6 @@ def _start_reader(stream):
     thread = threading.Thread(target=_read_lines, args=(stream, output), daemon=True)
     thread.start()
     return output
-
 
 
 def _read_json_event(output, event_name, timeout):
@@ -174,7 +171,6 @@ def _read_json_event(output, event_name, timeout):
     raise AssertionError('Timed out waiting for {0!r} event. Last payload: {1!r}'.format(event_name, last_payload))
 
 
-
 def _read_ready_file(path, stderr, process):
     deadline = time.time() + READY_TIMEOUT
     last_stderr = None
@@ -193,7 +189,6 @@ def _read_ready_file(path, stderr, process):
             raise AssertionError('GUI test app exited with {0}: {1}'.format(returncode, (last_stderr or '').strip()))
         time.sleep(0.05)
     raise AssertionError('Timed out waiting for GUI test app ready file: {0}'.format(path))
-
 
 
 def _read_ready_event(stdout, stderr, process):
@@ -223,11 +218,9 @@ def _read_ready_event(stdout, stderr, process):
     raise AssertionError('Timed out waiting for GUI test app ready event. Last stderr: {0!r}'.format(last_stderr))
 
 
-
 def _write_command(process, command):
     process.stdin.write('{0}\n'.format(command))
     process.stdin.flush()
-
 
 
 def _wait_for_text(process, stdout, expected):
@@ -241,7 +234,6 @@ def _wait_for_text(process, stdout, expected):
             return snapshot
         time.sleep(0.1)
     raise AssertionError('Timed out waiting for input text {0!r}. Last text: {1!r}'.format(expected, last_text))
-
 
 
 def _wait_for_located_center(image_path, xdisplay):
@@ -262,14 +254,12 @@ def _wait_for_located_center(image_path, xdisplay):
     )
 
 
-
 def _save_locate_debug_screenshot(xdisplay):
     os.makedirs(LOCATE_SCREENSHOT_DIR, exist_ok=True)
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     path = os.path.join(LOCATE_SCREENSHOT_DIR, 'locate-button-image-{0}.png'.format(timestamp))
     _with_display(xdisplay, pyautogui.screenshot).save(path)
     return path
-
 
 
 def _raise_with_locate_debug_screenshot(error, xdisplay):
@@ -282,7 +272,6 @@ def _raise_with_locate_debug_screenshot(error, xdisplay):
     raise AssertionError('{0}\nLocate debug screenshot: {1}'.format(error, screenshot_path)) from error
 
 
-
 def _locate_button_image_path():
     image_name = os.environ.get('PYAUTOGUI_LOCATE_BUTTON_IMAGE', sys.platform)
     image_path = LOCATE_BUTTON_IMAGES.get(image_name)
@@ -291,7 +280,6 @@ def _locate_button_image_path():
     if not os.path.exists(image_path):
         pytest.skip('Missing locate-button screenshot fixture: {0}'.format(image_path))
     return image_path
-
 
 
 def _with_display(xdisplay, func, *args, **kwargs):
