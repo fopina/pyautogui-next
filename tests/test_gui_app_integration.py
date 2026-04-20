@@ -19,8 +19,13 @@ import pyautogui
 require_gui_or_skip()
 
 
+APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
+DEFAULT_APP_PYTHON = '3.12'
+APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
+APP_BACKEND = os.environ.get('PYAUTOGUI_GUI_TEST_BACKEND', 'uvx')
 APP_IMAGE_NAME = os.environ.get('PYAUTOGUI_GUI_TEST_APP_IMAGE', 'pyautogui-next-gui-test-app')
 APP_CONTAINER_NAME_PREFIX = 'pyautogui-next-gui-test-app'
+APP_XDISPLAY = os.environ.get('PYAUTOGUI_GUI_TEST_XDISPLAY', 'localhost:0')
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
@@ -38,13 +43,45 @@ LOCATE_SCREENSHOT_DIR = os.environ.get(
     'PYAUTOGUI_LOCATE_SCREENSHOT_DIR',
     os.path.join(REPO_ROOT, 'artifacts', 'gui-test-screenshots'),
 )
-DOCKER_REQUIRED = pytest.mark.skipif(shutil.which('docker') is None, reason='docker is required for GUI app integration tests')
 
 
 class GuiTestAppProcess:
     def __enter__(self):
+        if APP_BACKEND == 'docker':
+            return self._enter_docker()
+        return self._enter_uvx()
+
+    def _enter_uvx(self):
         self.tmpdir = tempfile.TemporaryDirectory()
-        self.ready_file = os.path.join(self.tmpdir.name, 'ready.json')
+        ready_file = os.path.join(self.tmpdir.name, 'ready.json')
+        self.process = subprocess.Popen(
+            [
+                'uvx',
+                '--refresh',
+                '--python',
+                APP_PYTHON,
+                '--from',
+                APP_PROJECT_PATH,
+                'gui-test-app',
+                '--ready-file',
+                ready_file,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        self.stdout = _start_reader(self.process.stdout)
+        self.stderr = _start_reader(self.process.stderr)
+        self.ready = _read_ready_file(ready_file, self.stderr, self.process)
+        self.pyautogui_display = os.environ.get('DISPLAY')
+        return self
+
+    def _enter_docker(self):
+        if shutil.which('docker') is None:
+            pytest.skip('docker is required for docker-backed GUI app integration tests')
+        self.tmpdir = tempfile.TemporaryDirectory()
         self.container_name = '{0}-{1}'.format(APP_CONTAINER_NAME_PREFIX, os.getpid())
         self._ensure_image()
         self.process = subprocess.Popen(
@@ -71,8 +108,8 @@ class GuiTestAppProcess:
         )
         self.stdout = _start_reader(self.process.stdout)
         self.stderr = _start_reader(self.process.stderr)
-        self.ready = _read_ready_payload(self.stdout, self.stderr, self.process)
-        self.pyautogui_env = dict(os.environ, DISPLAY='localhost:0')
+        self.ready = _read_ready_event(self.stdout, self.stderr, self.process)
+        self.pyautogui_display = APP_XDISPLAY
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -138,7 +175,28 @@ def _read_json_event(output, event_name, timeout):
 
 
 
-def _read_ready_payload(stdout, stderr, process):
+def _read_ready_file(path, stderr, process):
+    deadline = time.time() + READY_TIMEOUT
+    last_stderr = None
+    while time.time() < deadline:
+        if os.path.exists(path):
+            with open(path) as ready_file:
+                return json.load(ready_file)
+        try:
+            last_stderr = stderr.get_nowait()
+        except queue.Empty:
+            pass
+        returncode = process.poll()
+        if returncode is not None:
+            if returncode == 2:
+                pytest.skip('GUI test app could not start: {0}'.format((last_stderr or '').strip()))
+            raise AssertionError('GUI test app exited with {0}: {1}'.format(returncode, (last_stderr or '').strip()))
+        time.sleep(0.05)
+    raise AssertionError('Timed out waiting for GUI test app ready file: {0}'.format(path))
+
+
+
+def _read_ready_event(stdout, stderr, process):
     deadline = time.time() + READY_TIMEOUT
     last_stderr = None
     while time.time() < deadline:
@@ -191,7 +249,7 @@ def _wait_for_located_center(image_path, xdisplay):
     last_error = None
     while time.time() < deadline:
         try:
-            center = pyautogui.locateCenterOnScreen(image_path)
+            center = _with_display(xdisplay, pyautogui.locateCenterOnScreen, image_path)
         except pyautogui.ImageNotFoundException as exc:
             last_error = exc
             center = None
@@ -209,15 +267,7 @@ def _save_locate_debug_screenshot(xdisplay):
     os.makedirs(LOCATE_SCREENSHOT_DIR, exist_ok=True)
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     path = os.path.join(LOCATE_SCREENSHOT_DIR, 'locate-button-image-{0}.png'.format(timestamp))
-    previous_display = os.environ.get('DISPLAY')
-    os.environ['DISPLAY'] = xdisplay
-    try:
-        pyautogui.screenshot().save(path)
-    finally:
-        if previous_display is None:
-            os.environ.pop('DISPLAY', None)
-        else:
-            os.environ['DISPLAY'] = previous_display
+    _with_display(xdisplay, pyautogui.screenshot).save(path)
     return path
 
 
@@ -245,6 +295,8 @@ def _locate_button_image_path():
 
 
 def _with_display(xdisplay, func, *args, **kwargs):
+    if not xdisplay:
+        return func(*args, **kwargs)
     previous_display = os.environ.get('DISPLAY')
     os.environ['DISPLAY'] = xdisplay
     try:
@@ -257,7 +309,6 @@ def _with_display(xdisplay, func, *args, **kwargs):
 
 
 @GUI_TEST
-@DOCKER_REQUIRED
 class TestGuiAppIntegration(unittest.TestCase):
     def setUp(self):
         self.old_failsafe_setting = pyautogui.FAILSAFE
@@ -266,7 +317,7 @@ class TestGuiAppIntegration(unittest.TestCase):
     def tearDown(self):
         pyautogui.FAILSAFE = self.old_failsafe_setting
 
-    def test_gui_app_container_uses_expected_python_version(self):
+    def test_gui_app_uses_expected_python_version(self):
         with GuiTestAppProcess() as app:
             self.assertTrue(
                 app.ready['python_version'].startswith('3.12'),
@@ -276,9 +327,9 @@ class TestGuiAppIntegration(unittest.TestCase):
     def test_type_hello_world_in_input_text(self):
         with GuiTestAppProcess() as app:
             text_input = app.ready['widgets']['text_input']
-            _with_display(app.pyautogui_env['DISPLAY'], pyautogui.click, text_input['center_x'], text_input['center_y'])
+            _with_display(app.pyautogui_display, pyautogui.click, text_input['center_x'], text_input['center_y'])
             time.sleep(0.25)
-            _with_display(app.pyautogui_env['DISPLAY'], pyautogui.typewrite, 'hello world', interval=0.01)
+            _with_display(app.pyautogui_display, pyautogui.typewrite, 'hello world', interval=0.01)
 
             snapshot = _wait_for_text(app.process, app.stdout, 'hello world')
             self.assertEqual(snapshot['state']['text'], 'hello world')
@@ -286,7 +337,7 @@ class TestGuiAppIntegration(unittest.TestCase):
     def test_click_button_increments_click_count(self):
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
-            _with_display(app.pyautogui_env['DISPLAY'], pyautogui.click, click_target['center_x'], click_target['center_y'])
+            _with_display(app.pyautogui_display, pyautogui.click, click_target['center_x'], click_target['center_y'])
 
             event = _read_json_event(app.stdout, 'button_command', SNAPSHOT_TIMEOUT)
             self.assertEqual(event['widget'], 'click_target')
@@ -301,7 +352,7 @@ class TestGuiAppIntegration(unittest.TestCase):
         image_path = _locate_button_image_path()
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
-            located_center = _with_display(app.pyautogui_env['DISPLAY'], _wait_for_located_center, image_path, app.pyautogui_env['DISPLAY'])
+            located_center = _wait_for_located_center(image_path, app.pyautogui_display)
 
             self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
             self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
