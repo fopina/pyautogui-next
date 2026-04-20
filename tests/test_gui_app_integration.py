@@ -25,6 +25,9 @@ SNAPSHOT_TIMEOUT = 5
 TYPE_TIMEOUT = 5
 LOCATE_TIMEOUT = 5
 LOCATE_CENTER_TOLERANCE = 10
+LOCATE_BUTTON_IMAGES = {
+    'darwin': os.path.join(SCRIPT_FOLDER, 'click-target-button-darwin.png'),
+}
 LOCATE_SCREENSHOT_DIR = os.environ.get(
     'PYAUTOGUI_LOCATE_SCREENSHOT_DIR',
     os.path.join(REPO_ROOT, 'artifacts', 'gui-test-screenshots'),
@@ -157,6 +160,15 @@ def _raise_with_locate_debug_screenshot(error):
     raise AssertionError('{0}\nLocate debug screenshot: {1}'.format(error, screenshot_path)) from error
 
 
+def _locate_button_image_path():
+    image_path = LOCATE_BUTTON_IMAGES.get(sys.platform)
+    if image_path is None:
+        pytest.skip('No locate-button screenshot fixture for {0!r}'.format(sys.platform))
+    if not os.path.exists(image_path):
+        pytest.skip('Missing locate-button screenshot fixture: {0}'.format(image_path))
+    return image_path
+
+
 @GUI_TEST
 class TestGuiAppIntegration(unittest.TestCase):
     def setUp(self):
@@ -189,10 +201,11 @@ class TestGuiAppIntegration(unittest.TestCase):
             self.assertEqual(event['state']['status'], 'Button clicks: 1')
 
     def test_locate_button_image_matches_button_coordinates(self):
+        image_path = _locate_button_image_path()
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
             try:
-                located_center = _wait_for_located_center(app.ready['assets']['click_target_image'])
+                located_center = _wait_for_located_center(image_path)
 
                 self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
                 self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
