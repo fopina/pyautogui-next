@@ -7,7 +7,7 @@ import threading
 import time
 import unittest
 import doctest
-from collections import namedtuple  # Added in Python 2.6.
+from collections import namedtuple
 
 import pyautogui
 
@@ -15,7 +15,6 @@ import pyautogui
 scriptFolder = os.path.dirname(os.path.realpath(__file__))
 os.chdir(scriptFolder)
 
-runningOnPython2 = sys.version_info[0] == 2
 
 if runningOnPython2:
     INPUT_FUNC = raw_input
