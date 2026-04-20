@@ -140,7 +140,9 @@ def _wait_for_located_center(image_path):
         if center is not None:
             return center
         time.sleep(0.1)
-    raise AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error))
+    _raise_with_locate_debug_screenshot(
+        AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error))
+    )
 
 
 def _save_locate_debug_screenshot():
@@ -205,10 +207,7 @@ class TestGuiAppIntegration(unittest.TestCase):
         image_path = _locate_button_image_path()
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
-            try:
-                located_center = _wait_for_located_center(image_path)
+            located_center = _wait_for_located_center(image_path)
 
-                self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
-                self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
-            except AssertionError as exc:
-                _raise_with_locate_debug_screenshot(exc)
+            self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
+            self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
