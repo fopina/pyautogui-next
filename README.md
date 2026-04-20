@@ -6,7 +6,7 @@
 [![Current version on PyPI](https://img.shields.io/pypi/v/pyautogui-next)](https://pypi.org/project/pyautogui-next/)
 [![Downloads](https://img.shields.io/pypi/dm/pyautogui-next)](https://pypistats.org/packages/pyautogui-next)
 
-> This is a hard fork of the original PyAutoGUI project, created to continue supporting it and to add new features. All credit for the original project goes to [Al Sweigart](https://github.com/asweigart).
+> This is a hard fork of the original [PyAutoGUI](https://github.com/asweigart/pyautogui/) project, created to continue supporting it and to add new features. All credit for the original project goes to [Al Sweigart](https://github.com/asweigart).
 
 Fork of PyAutoGUI, packaged and published as `pyautogui-next` while keeping the import package as `pyautogui`.
 
