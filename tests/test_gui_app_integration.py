@@ -19,7 +19,7 @@ require_gui_or_skip()
 
 
 APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
-DEFAULT_APP_PYTHON = '3.12' if sys.platform == 'darwin' else sys.executable
+DEFAULT_APP_PYTHON = '3.12'
 APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
