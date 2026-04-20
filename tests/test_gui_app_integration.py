@@ -18,9 +18,11 @@ import pyautogui
 require_gui_or_skip()
 
 
-APP_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app.py')
+APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
+DEFAULT_APP_PYTHON = '3.10' if sys.platform == 'darwin' else sys.executable
+APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
-READY_TIMEOUT = 10
+READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
 TYPE_TIMEOUT = 5
 LOCATE_TIMEOUT = 5
@@ -42,7 +44,7 @@ class GuiTestAppProcess:
         self.tmpdir = tempfile.TemporaryDirectory()
         ready_file = os.path.join(self.tmpdir.name, 'ready.json')
         self.process = subprocess.Popen(
-            [sys.executable, APP_PATH, '--ready-file', ready_file],
+            ['uvx', '--python', APP_PYTHON, '--from', APP_PROJECT_PATH, 'gui-test-app', '--ready-file', ready_file],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

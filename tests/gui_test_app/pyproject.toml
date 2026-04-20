@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69.5.0,<80.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyautogui-next-gui-test-app"
+version = "0.1.0"
+description = "GUI fixture app for pyautogui-next integration tests."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+gui-test-app = "gui_test_app.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,8 +1,8 @@
 """Small cross-platform GUI target for PyAutoGUI integration tests.
 
-Run it as a subprocess from tests:
+Run it as a subprocess from tests through uvx:
 
-    python tests/gui_test_app.py --ready-file /tmp/pyautogui-ready.json
+    uvx --python 3.10 --from tests/gui_test_app gui-test-app --ready-file /tmp/pyautogui-ready.json
 
 The app prints newline-delimited JSON events to stdout and accepts newline
 commands on stdin: ``snapshot``, ``clear``, or ``quit``. Commands may also be
@@ -362,14 +362,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if TKINTER_IMPORT_ERROR is not None:
-        print('tkinter is required for tests/gui_test_app.py: {0}'.format(TKINTER_IMPORT_ERROR), file=sys.stderr)
+        print('tkinter is required for the GUI test app: {0}'.format(TKINTER_IMPORT_ERROR), file=sys.stderr)
         return 2
 
     try:
         app = GuiTestApp(args)
         app.run()
     except tk.TclError as exc:
-        print('Unable to start Tk GUI for tests/gui_test_app.py: {0}'.format(exc), file=sys.stderr)
+        print('Unable to start Tk GUI for the GUI test app: {0}'.format(exc), file=sys.stderr)
         return 2
     return 0
 
