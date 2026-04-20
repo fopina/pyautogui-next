@@ -70,16 +70,8 @@ jobs:
         run: |
           xvfb-run -a make gui-test
 
-      - name: Run macOS GUI tests
-        if: runner.os == 'macOS'
-        env:
-          PYAUTOGUI_GUI_TEST_APP_PYTHON: ${{ steps.setup-macos-gui-python.outputs.python-path }}
-          PYAUTOGUI_GUI_TEST_APP_EXPECTED_PYTHON: "3.12"
-        run: |
-          make gui-test
-
-      - name: Run Windows GUI tests
-        if: runner.os == 'Windows'
+      - name: Run macOS and Windows GUI tests
+        if: runner.os != 'Linux'
         run: |
           make gui-test
 
