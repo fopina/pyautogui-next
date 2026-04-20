@@ -1,0 +1,20 @@
+name: 🚀 publish
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+a[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+b[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+
+jobs:
+  test_and_publish:
+    uses: ./.github/workflows/publish.yml
+    with:
+      # so easy to forget bumping the version to match the tag, just override it!
+      version: ${{ github.ref_name }}
+    secrets:
+      twine_token: ${{ secrets.PYPI_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
