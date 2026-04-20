@@ -27,6 +27,8 @@ LOCATE_TIMEOUT = 5
 LOCATE_CENTER_TOLERANCE = 10
 LOCATE_BUTTON_IMAGES = {
     'darwin': os.path.join(SCRIPT_FOLDER, 'click-target-button-darwin.png'),
+    'linux': os.path.join(SCRIPT_FOLDER, 'click-target-button-linux.png'),
+    'win32': os.path.join(SCRIPT_FOLDER, 'click-target-button-windows.png'),
 }
 LOCATE_BUTTON_FALLBACK_IMAGE = LOCATE_BUTTON_IMAGES['darwin']
 LOCATE_SCREENSHOT_DIR = os.environ.get(
