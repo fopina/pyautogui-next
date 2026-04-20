@@ -1,22 +1,31 @@
-PyAutoGUI
-=========
+# [pyautogui-next](https://github.com/fopina/pyautogui-next)
+
+[![publish](https://github.com/fopina/pyautogui-next/actions/workflows/publish-main.yml/badge.svg)](https://github.com/fopina/pyautogui-next/actions/workflows/publish-main.yml)
+[![test](https://github.com/fopina/pyautogui-next/actions/workflows/test.yml/badge.svg)](https://github.com/fopina/pyautogui-next/actions/workflows/test.yml)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/pyautogui-next.svg)](https://pypi.org/project/pyautogui-next/)
+[![Current version on PyPI](https://img.shields.io/pypi/v/pyautogui-next)](https://pypi.org/project/pyautogui-next/)
+[![Downloads](https://img.shields.io/pypi/dm/pyautogui-next)](https://pypistats.org/packages/pyautogui-next)
+
+> This is a hard fork of the original PyAutoGUI project, created to continue supporting it and to add new features. All credit for the original project goes to [Al Sweigart](https://github.com/asweigart).
+
+Fork of PyAutoGUI, packaged and published as `pyautogui-next` while keeping the import package as `pyautogui`.
 
 PyAutoGUI is a  cross-platform GUI automation Python module for human beings. Used to programmatically control the mouse & keyboard.
 
-`pip install pyautogui`
+`pip install pyautogui-next`
 
 Full documentation available at https://pyautogui.readthedocs.org
 
 Simplified Chinese documentation available at https://github.com/asweigart/pyautogui/blob/master/docs/simplified-chinese.ipynb
 
-Source code available at https://github.com/asweigart/pyautogui
+Source code available at https://github.com/fopina/pyautogui-next
 
 If you need help installing Python, visit https://installpython3.com/
 
 Dependencies
 ============
 
-PyAutoGUI supports Python 2 and 3. If you are installing PyAutoGUI from PyPI using pip:
+If you are installing pyautogui-next from PyPI using pip:
 
 Windows has no dependencies. The Win32 extensions do not need to be installed.
 
@@ -30,7 +39,13 @@ Pillow needs to be installed, and on Linux you may need to install additional li
 
     http://ubuntuforums.org/showthread.php?t=1751455
 
-If you want to do development and contribute to PyAutoGUI, you will need to install these modules from PyPI:
+If you want to do development and contribute to pyautogui-next, set up the project with `uv`:
+
+```
+uv sync --dev
+```
+
+The main runtime/import package remains `pyautogui`. Extra development dependencies include:
 
 * pyscreeze
 * pymsgbox
