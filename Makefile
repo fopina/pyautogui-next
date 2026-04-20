@@ -29,4 +29,5 @@ test-gui: export PYAUTOGUI_RUN_GUI_TESTS=1
 test-gui: test
 
 test-docker-gui: export PYAUTOGUI_GUI_TEST_BACKEND=docker
+test-docker-gui: export DISPLAY=127.0.0.1:0
 test-docker-gui: test-gui
