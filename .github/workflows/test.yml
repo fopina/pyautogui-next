@@ -71,12 +71,12 @@ jobs:
         env:
           XDG_SESSION_TYPE: x11
         run: |
-          xvfb-run -a make gui-test
+          xvfb-run -a make test-gui
 
       - name: Run macOS and Windows GUI tests
         if: runner.os != 'Linux'
         run: |
-          make gui-test
+          make test-gui
 
       - name: Upload GUI test screenshots
         if: failure()
