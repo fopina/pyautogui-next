@@ -125,6 +125,33 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-docker-action@v4
 
+      - name: Use Linux Docker engine
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dockerCli = Join-Path $env:ProgramFiles 'Docker\Docker\DockerCli.exe'
+          if (Test-Path $dockerCli) {
+            & $dockerCli -SwitchLinuxEngine
+          }
+
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+            try {
+              docker version | Out-Null
+              $osType = docker info --format '{{.OSType}}'
+              if ($osType -eq 'linux') {
+                exit 0
+              }
+            } catch {
+              Start-Sleep -Seconds 5
+              continue
+            }
+            Start-Sleep -Seconds 5
+          } while ((Get-Date) -lt $deadline)
+
+          docker info
+          throw 'Docker is not using the Linux engine'
+
       - name: Install dependencies
         run: |
           pip install uv

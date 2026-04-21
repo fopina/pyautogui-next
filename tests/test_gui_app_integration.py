@@ -75,7 +75,7 @@ class GuiTestAppProcess:
         self.stdout = _start_reader(self.process.stdout)
         self.stderr = _start_reader(self.process.stderr)
         self.ready = _read_ready_file(ready_file, self.stderr, self.process)
-        self.pyautogui_display = os.environ.get('DISPLAY')
+        self.pyautogui_display = None
         return self
 
     def _enter_docker(self):
