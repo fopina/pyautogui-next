@@ -98,3 +98,47 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.python-version }}
           report_type: test_results
+
+  docker-gui-tests:
+    needs: lint-check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            target-os: macos
+          - os: windows-latest
+            target-os: windows
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: |
+            3.12
+            3.13
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --dev
+          uv pip install python-Xlib
+
+      - name: Run Docker GUI tests
+        run: |
+          make test-docker-gui
+
+      - name: Upload GUI test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-gui-test-screenshots-${{ matrix.target-os }}-3.13
+          path: artifacts/gui-test-screenshots
+          if-no-files-found: ignore
