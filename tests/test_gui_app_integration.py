@@ -25,7 +25,7 @@ APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
 APP_BACKEND = os.environ.get('PYAUTOGUI_GUI_TEST_BACKEND', 'uvx')
 APP_IMAGE_NAME = os.environ.get('PYAUTOGUI_GUI_TEST_APP_IMAGE', 'pyautogui-next-gui-test-app')
 APP_CONTAINER_NAME_PREFIX = 'pyautogui-next-gui-test-app'
-APP_XDISPLAY = os.environ.get('PYAUTOGUI_GUI_TEST_XDISPLAY', 'localhost:0')
+APP_XDISPLAY = os.environ.get('PYAUTOGUI_GUI_TEST_XDISPLAY', '127.0.0.1:0')
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
@@ -285,15 +285,11 @@ def _locate_button_image_path():
 def _with_display(xdisplay, func, *args, **kwargs):
     if not xdisplay:
         return func(*args, **kwargs)
-    previous_display = os.environ.get('DISPLAY')
-    os.environ['DISPLAY'] = xdisplay
+    previous_display = pyautogui.useXDisplay(xdisplay)
     try:
         return func(*args, **kwargs)
     finally:
-        if previous_display is None:
-            os.environ.pop('DISPLAY', None)
-        else:
-            os.environ['DISPLAY'] = previous_display
+        pyautogui.useXDisplay(previous_display)
 
 
 @GUI_TEST

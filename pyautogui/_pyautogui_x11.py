@@ -15,8 +15,8 @@ from pyautogui import LEFT, MIDDLE, RIGHT
 BUTTON_NAME_MAPPING = {LEFT: 1, MIDDLE: 2, RIGHT: 3, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
 
 
-if sys.platform in ('java', 'darwin', 'win32'):
-    raise Exception('The pyautogui_x11 module should only be loaded on a Unix system that supports X11.')
+if sys.platform == 'java':
+    raise Exception('The pyautogui_x11 module should not be loaded on Jython.')
 
 # from pyautogui import *
 
@@ -192,13 +192,21 @@ def _keyUp(key):
 
 _display_name = None
 _display = None
+_display_override = None
 _keyboardMapping = None
 _keyboardMappingDisplayName = None
 
 
+def _setDisplayOverride(display_name):
+    global _display_override
+    previous_display = _display_override
+    _display_override = display_name
+    return previous_display
+
+
 def _getDisplay():
     global _display_name, _display
-    display_name = os.environ['DISPLAY']
+    display_name = _display_override or os.environ['DISPLAY']
     if _display is not None and _display_name == display_name:
         return _display
 
