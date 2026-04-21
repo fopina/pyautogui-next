@@ -31,3 +31,6 @@ test-gui: test
 test-docker-gui: export PYAUTOGUI_GUI_TEST_BACKEND=docker
 test-docker-gui: export PYAUTOGUI_LOCATE_BUTTON_IMAGE=linux-docker
 test-docker-gui: test-gui
+
+sync:
+	uv sync --dev --all-extras
