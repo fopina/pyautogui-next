@@ -24,6 +24,8 @@ import sys
 import time
 from contextlib import contextmanager
 
+from PIL import ImageGrab
+
 
 class PyAutoGUIException(Exception):
     """
@@ -171,7 +173,7 @@ def raisePyAutoGUIImageNotFoundException(wrappedFunction):
 
 try:
     import pyscreeze
-    from pyscreeze import center, pixel, pixelMatchesColor, screenshot
+    from pyscreeze import center, pixel, pixelMatchesColor
 
     # Change the locate*() functions so that they raise PyAutoGUI's ImageNotFoundException instead.
     @raisePyAutoGUIImageNotFoundException
@@ -194,12 +196,21 @@ try:
 
     @raisePyAutoGUIImageNotFoundException
     def locateCenterOnScreen(*args, **kwargs):
+        xdisplay = kwargs.pop('xdisplay', None)
+        if xdisplay or XDISPLAY:
+            coords = locateOnScreen(*args, xdisplay=xdisplay, **kwargs)
+            if coords is None:
+                return None
+            return center(coords)
         return pyscreeze.locateCenterOnScreen(*args, **kwargs)
 
     locateCenterOnScreen.__doc__ = pyscreeze.locateCenterOnScreen.__doc__
 
     @raisePyAutoGUIImageNotFoundException
     def locateOnScreen(*args, **kwargs):
+        xdisplay = kwargs.pop('xdisplay', None)
+        if xdisplay or XDISPLAY:
+            return _locateOnScreenWithXDisplay(*args, xdisplay=xdisplay, **kwargs)
         return pyscreeze.locateOnScreen(*args, **kwargs)
 
     locateOnScreen.__doc__ = pyscreeze.locateOnScreen.__doc__
@@ -209,6 +220,11 @@ try:
         return pyscreeze.locateOnWindow(*args, **kwargs)
 
     locateOnWindow.__doc__ = pyscreeze.locateOnWindow.__doc__
+
+    def screenshot(imageFilename=None, region=None, xdisplay=None):
+        if xdisplay or XDISPLAY:
+            return _screenshotWithXDisplay(imageFilename=imageFilename, region=region, xdisplay=xdisplay)
+        return pyscreeze.screenshot(imageFilename=imageFilename, region=region)
 
 
 except ImportError:
@@ -538,6 +554,77 @@ elif platform.system() == 'Linux':
 else:
     raise NotImplementedError('Your platform (%s) is not supported by PyAutoGUI.' % (platform.system()))
 
+_nativePlatformModule = platformModule
+_x11PlatformModule = None
+XDISPLAY = None
+
+
+def _getX11PlatformModule():
+    global _x11PlatformModule
+    if _x11PlatformModule is None:
+        from . import _pyautogui_x11
+
+        _x11PlatformModule = _pyautogui_x11
+    return _x11PlatformModule
+
+
+def useXDisplay(display=None):
+    """Uses an X11 display for PyAutoGUI calls without changing os.environ['DISPLAY']."""
+    global XDISPLAY, platformModule
+    previous_display = XDISPLAY
+    XDISPLAY = display
+    if display:
+        x11Module = _getX11PlatformModule()
+        x11Module._setDisplayOverride(display)
+        platformModule = x11Module
+    else:
+        if _x11PlatformModule is not None:
+            _x11PlatformModule._setDisplayOverride(None)
+        platformModule = _nativePlatformModule
+    return previous_display
+
+
+@contextmanager
+def _xDisplay(display=None):
+    previous_display = None
+    if display:
+        previous_display = useXDisplay(display)
+    try:
+        yield
+    finally:
+        if display:
+            useXDisplay(previous_display)
+
+
+def _screenshotWithXDisplay(imageFilename=None, region=None, xdisplay=None):
+    display = xdisplay or XDISPLAY
+    bbox = None
+    if region is not None:
+        assert len(region) == 4, 'region argument must be a tuple of four ints'
+        bbox = (region[0], region[1], region[0] + region[2], region[1] + region[3])
+
+    im = ImageGrab.grab(bbox=bbox, xdisplay=display)
+    if imageFilename is not None:
+        im.save(imageFilename)
+    return im
+
+
+def _locateOnScreenWithXDisplay(image, minSearchTime=0, xdisplay=None, **kwargs):
+    start = time.time()
+    while True:
+        try:
+            screenshotIm = _screenshotWithXDisplay(xdisplay=xdisplay)
+            retVal = pyscreeze.locate(image, screenshotIm, **kwargs)
+            if retVal or time.time() - start > minSearchTime:
+                return retVal
+        except pyscreeze.ImageNotFoundException:
+            if time.time() - start > minSearchTime:
+                if pyscreeze.USE_IMAGE_NOT_FOUND_EXCEPTION:
+                    raise
+                else:
+                    return None
+
+
 # TODO: Having module-wide user-writable global variables is bad. It makes
 # restructuring the code very difficult. For instance, what if we decide to
 # move the mouse-related functions to a separate file (a submodule)? How that
@@ -632,7 +719,7 @@ def _handlePause(_pause):
         time.sleep(PAUSE)
 
 
-def _normalizeXYArgs(firstArg, secondArg):
+def _normalizeXYArgs(firstArg, secondArg, xdisplay=None):
     """
     Returns a ``Point`` object based on ``firstArg`` and ``secondArg``, which are the first two arguments passed to
     several PyAutoGUI functions. If ``firstArg`` and ``secondArg`` are both ``None``, returns the current mouse cursor
@@ -653,7 +740,7 @@ def _normalizeXYArgs(firstArg, secondArg):
     elif isinstance(firstArg, str):
         # If x is a string, we assume it's an image filename to locate on the screen:
         try:
-            location = locateOnScreen(firstArg)
+            location = locateOnScreen(firstArg, xdisplay=xdisplay)
             # The following code only runs if pyscreeze.USE_IMAGE_NOT_FOUND_EXCEPTION is not set to True, meaning that
             # locateOnScreen() returns None if the image can't be found.
             if location is not None:
@@ -663,7 +750,7 @@ def _normalizeXYArgs(firstArg, secondArg):
         except pyscreeze.ImageNotFoundException:
             raise ImageNotFoundException
 
-        return center(locateOnScreen(firstArg))
+        return center(locateOnScreen(firstArg, xdisplay=xdisplay))
 
     elif isinstance(firstArg, Sequence):
         if len(firstArg) == 2:
@@ -940,7 +1027,16 @@ def mouseUp(x=None, y=None, button=PRIMARY, duration=0.0, tween=linear, logScree
 
 @_genericPyAutoGUIChecks
 def click(
-    x=None, y=None, clicks=1, interval=0.0, button=PRIMARY, duration=0.0, tween=linear, logScreenshot=None, _pause=True
+    x=None,
+    y=None,
+    clicks=1,
+    interval=0.0,
+    button=PRIMARY,
+    duration=0.0,
+    tween=linear,
+    logScreenshot=None,
+    _pause=True,
+    xdisplay=None,
 ):
     """
     Performs pressing a mouse button down and then immediately releasing it. Returns ``None``.
@@ -973,27 +1069,28 @@ def click(
     Raises:
       PyAutoGUIException: If button is not one of 'left', 'middle', 'right', 1, 2, 3
     """
-    # TODO: I'm leaving buttons 4, 5, 6, and 7 undocumented for now. I need to understand how they work.
-    button = _normalizeButton(button)
-    x, y = _normalizeXYArgs(x, y)
+    with _xDisplay(xdisplay):
+        # TODO: I'm leaving buttons 4, 5, 6, and 7 undocumented for now. I need to understand how they work.
+        button = _normalizeButton(button)
+        x, y = _normalizeXYArgs(x, y, xdisplay=xdisplay)
 
-    # Move the mouse cursor to the x, y coordinate:
-    _mouseMoveDrag('move', x, y, 0, 0, duration, tween)
+        # Move the mouse cursor to the x, y coordinate:
+        _mouseMoveDrag('move', x, y, 0, 0, duration, tween)
 
-    _logScreenshot(logScreenshot, 'click', '%s,%s,%s,%s' % (button, clicks, x, y), folder='.')
+        _logScreenshot(logScreenshot, 'click', '%s,%s,%s,%s' % (button, clicks, x, y), folder='.')
 
-    if sys.platform == 'darwin':
-        for i in range(clicks):
-            failSafeCheck()
-            if button in (LEFT, MIDDLE, RIGHT):
-                platformModule._multiClick(x, y, button, 1, interval)
-    else:
-        for i in range(clicks):
-            failSafeCheck()
-            if button in (LEFT, MIDDLE, RIGHT):
-                platformModule._click(x, y, button)
+        if sys.platform == 'darwin' and not (xdisplay or XDISPLAY):
+            for i in range(clicks):
+                failSafeCheck()
+                if button in (LEFT, MIDDLE, RIGHT):
+                    platformModule._multiClick(x, y, button, 1, interval)
+        else:
+            for i in range(clicks):
+                failSafeCheck()
+                if button in (LEFT, MIDDLE, RIGHT):
+                    platformModule._click(x, y, button)
 
-            time.sleep(interval)
+                time.sleep(interval)
 
 
 @_genericPyAutoGUIChecks
@@ -1528,6 +1625,8 @@ def isValidKey(key):
     Returns:
       bool: True if key is a valid value, False if not.
     """
+    if hasattr(platformModule, '_getKeyboardMapping'):
+        return platformModule._getKeyboardMapping().get(key, None) is not None
     return platformModule.keyboardMapping.get(key, None) is not None
 
 

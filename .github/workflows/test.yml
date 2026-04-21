@@ -71,12 +71,12 @@ jobs:
         env:
           XDG_SESSION_TYPE: x11
         run: |
-          xvfb-run -a make gui-test
+          xvfb-run -a make test-gui
 
       - name: Run macOS and Windows GUI tests
         if: runner.os != 'Linux'
         run: |
-          make gui-test
+          make test-gui
 
       - name: Upload GUI test screenshots
         if: failure()
@@ -98,3 +98,70 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.python-version }}
           report_type: test_results
+
+  # docker-gui-tests:
+  #   needs: lint-check
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - os: macos-latest
+  #         - os: windows-latest
+  #   runs-on: ${{ matrix.os }}
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v6
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v6
+  #       with:
+  #         python-version: 3.13
+
+  #     - name: Set up Docker
+  #       uses: docker/setup-docker-action@v4
+
+  #     - name: Use Linux Docker engine
+  #       if: runner.os == 'Windows'
+  #       shell: pwsh
+  #       run: |
+  #         $dockerCli = Join-Path $env:ProgramFiles 'Docker\Docker\DockerCli.exe'
+  #         if (Test-Path $dockerCli) {
+  #           & $dockerCli -SwitchLinuxEngine
+  #         }
+
+  #         $deadline = (Get-Date).AddMinutes(2)
+  #         do {
+  #           try {
+  #             docker version | Out-Null
+  #             $osType = docker info --format '{{.OSType}}'
+  #             if ($osType -eq 'linux') {
+  #               exit 0
+  #             }
+  #           } catch {
+  #             Start-Sleep -Seconds 5
+  #             continue
+  #           }
+  #           Start-Sleep -Seconds 5
+  #         } while ((Get-Date) -lt $deadline)
+
+  #         docker info
+  #         throw 'Docker is not using the Linux engine'
+
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install uv
+  #         uv sync --dev
+  #         uv pip install python-Xlib
+
+  #     - name: Run Docker GUI tests
+  #       run: |
+  #         make test-docker-gui
+
+  #     - name: Upload GUI test screenshots
+  #       if: failure()
+  #       uses: actions/upload-artifact@v7
+  #       with:
+  #         name: docker-gui-test-screenshots-${{ matrix.os }}-3.13
+  #         path: artifacts/gui-test-screenshots
+  #         if-no-files-found: ignore

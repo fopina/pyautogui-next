@@ -33,4 +33,4 @@ COPY tests ./tests
 
 RUN uv sync --dev
 
-CMD ["xvfb-run", "-a", "make", "gui-test"]
+CMD ["xvfb-run", "-a", "make", "test-gui"]

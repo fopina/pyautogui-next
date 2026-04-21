@@ -3,6 +3,7 @@ from __future__ import division, print_function
 import json
 import os
 import queue
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,10 @@ require_gui_or_skip()
 APP_PROJECT_PATH = os.path.join(SCRIPT_FOLDER, 'gui_test_app')
 DEFAULT_APP_PYTHON = '3.12'
 APP_PYTHON = os.environ.get('PYAUTOGUI_GUI_TEST_APP_PYTHON', DEFAULT_APP_PYTHON)
+APP_BACKEND = os.environ.get('PYAUTOGUI_GUI_TEST_BACKEND', 'uvx')
+APP_IMAGE_NAME = os.environ.get('PYAUTOGUI_GUI_TEST_APP_IMAGE', 'pyautogui-next-gui-test-app')
+APP_CONTAINER_NAME_PREFIX = 'pyautogui-next-gui-test-app'
+APP_XDISPLAY = os.environ.get('PYAUTOGUI_GUI_TEST_XDISPLAY', '127.0.0.1:0')
 REPO_ROOT = os.path.dirname(SCRIPT_FOLDER)
 READY_TIMEOUT = int(os.environ.get('PYAUTOGUI_GUI_TEST_READY_TIMEOUT', '60'))
 SNAPSHOT_TIMEOUT = 5
@@ -42,6 +47,11 @@ LOCATE_SCREENSHOT_DIR = os.environ.get(
 
 class GuiTestAppProcess:
     def __enter__(self):
+        if APP_BACKEND == 'docker':
+            return self._enter_docker()
+        return self._enter_uvx()
+
+    def _enter_uvx(self):
         self.tmpdir = tempfile.TemporaryDirectory()
         ready_file = os.path.join(self.tmpdir.name, 'ready.json')
         self.process = subprocess.Popen(
@@ -63,7 +73,44 @@ class GuiTestAppProcess:
             bufsize=1,
         )
         self.stdout = _start_reader(self.process.stdout)
-        self.ready = _read_ready_file(ready_file, self.process)
+        self.stderr = _start_reader(self.process.stderr)
+        self.ready = _read_ready_file(ready_file, self.stderr, self.process)
+        self.pyautogui_display = None
+        return self
+
+    def _enter_docker(self):
+        if shutil.which('docker') is None:
+            pytest.skip('docker is required for docker-backed GUI app integration tests')
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.container_name = '{0}-{1}'.format(APP_CONTAINER_NAME_PREFIX, os.getpid())
+        self._ensure_image()
+        self.process = subprocess.Popen(
+            [
+                'docker',
+                'run',
+                '--rm',
+                '--init',
+                '--name',
+                self.container_name,
+                '-p',
+                '6000:6000',
+                '-e',
+                'GUI_TEST_APP_READY_FILE=/tmp/gui-test-app-ready.json',
+                '-e',
+                'GUI_TEST_APP_TIMEOUT=0',
+                APP_IMAGE_NAME,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        self.stdout = _start_reader(self.process.stdout)
+        self.stderr = _start_reader(self.process.stderr)
+        self.ready = _read_ready_event(self.stdout, self.stderr, self.process)
+        self.pyautogui_display = APP_XDISPLAY
+        _wait_for_pyautogui_display(self.pyautogui_display, self.stderr, self.process)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -77,6 +124,22 @@ class GuiTestAppProcess:
                     self.process.wait(timeout=2)
         finally:
             self.tmpdir.cleanup()
+
+    def _ensure_image(self):
+        inspect = subprocess.run(
+            ['docker', 'image', 'inspect', APP_IMAGE_NAME],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            text=True,
+        )
+        if inspect.returncode == 0:
+            return
+        subprocess.run(
+            ['docker', 'build', '-f', 'tests/gui_test_app/Dockerfile', '-t', APP_IMAGE_NAME, 'tests/gui_test_app'],
+            cwd=REPO_ROOT,
+            check=True,
+        )
 
 
 def _read_lines(stream, output):
@@ -109,20 +172,51 @@ def _read_json_event(output, event_name, timeout):
     raise AssertionError('Timed out waiting for {0!r} event. Last payload: {1!r}'.format(event_name, last_payload))
 
 
-def _read_ready_file(path, process):
+def _read_ready_file(path, stderr, process):
     deadline = time.time() + READY_TIMEOUT
+    last_stderr = None
     while time.time() < deadline:
         if os.path.exists(path):
             with open(path) as ready_file:
                 return json.load(ready_file)
+        try:
+            last_stderr = stderr.get_nowait()
+        except queue.Empty:
+            pass
         returncode = process.poll()
         if returncode is not None:
-            stderr = process.stderr.read()
             if returncode == 2:
-                pytest.skip('GUI test app could not start: {0}'.format(stderr.strip()))
-            raise AssertionError('GUI test app exited with {0}: {1}'.format(returncode, stderr.strip()))
+                pytest.skip('GUI test app could not start: {0}'.format((last_stderr or '').strip()))
+            raise AssertionError('GUI test app exited with {0}: {1}'.format(returncode, (last_stderr or '').strip()))
         time.sleep(0.05)
     raise AssertionError('Timed out waiting for GUI test app ready file: {0}'.format(path))
+
+
+def _read_ready_event(stdout, stderr, process):
+    deadline = time.time() + READY_TIMEOUT
+    last_stderr = None
+    while time.time() < deadline:
+        try:
+            line = stdout.get(timeout=0.05)
+        except queue.Empty:
+            line = None
+        if line:
+            try:
+                payload = json.loads(line)
+            except ValueError:
+                payload = None
+            if payload and payload.get('event') == 'ready':
+                return payload
+        try:
+            last_stderr = stderr.get_nowait()
+        except queue.Empty:
+            pass
+        returncode = process.poll()
+        if returncode is not None:
+            if returncode == 2:
+                pytest.skip('GUI test app could not start: {0}'.format((last_stderr or '').strip()))
+            raise AssertionError('GUI test app exited with {0}: {1}'.format(returncode, (last_stderr or '').strip()))
+    raise AssertionError('Timed out waiting for GUI test app ready event. Last stderr: {0!r}'.format(last_stderr))
 
 
 def _write_command(process, command):
@@ -143,12 +237,12 @@ def _wait_for_text(process, stdout, expected):
     raise AssertionError('Timed out waiting for input text {0!r}. Last text: {1!r}'.format(expected, last_text))
 
 
-def _wait_for_located_center(image_path):
+def _wait_for_located_center(image_path, xdisplay):
     deadline = time.time() + LOCATE_TIMEOUT
     last_error = None
     while time.time() < deadline:
         try:
-            center = pyautogui.locateCenterOnScreen(image_path)
+            center = _with_display(xdisplay, pyautogui.locateCenterOnScreen, image_path)
         except pyautogui.ImageNotFoundException as exc:
             last_error = exc
             center = None
@@ -156,21 +250,55 @@ def _wait_for_located_center(image_path):
             return center
         time.sleep(0.1)
     _raise_with_locate_debug_screenshot(
-        AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error))
+        AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error)),
+        xdisplay,
     )
 
 
-def _save_locate_debug_screenshot():
+def _wait_for_pyautogui_display(xdisplay, stderr, process):
+    deadline = time.time() + READY_TIMEOUT
+    last_error = None
+    last_stderr = None
+    while time.time() < deadline:
+        try:
+            _with_display(xdisplay, pyautogui.size)
+            return
+        except Exception as exc:
+            last_error = exc
+        try:
+            last_stderr = stderr.get_nowait()
+        except queue.Empty:
+            pass
+        returncode = process.poll()
+        if returncode is not None:
+            raise AssertionError(
+                'GUI test app exited with {0} while waiting for X display {1}: {2}'.format(
+                    returncode,
+                    xdisplay,
+                    (last_stderr or '').strip(),
+                )
+            )
+        time.sleep(0.1)
+    raise AssertionError(
+        'Timed out waiting for X display {0}. Last error: {1!r}. Last stderr: {2!r}'.format(
+            xdisplay,
+            last_error,
+            last_stderr,
+        )
+    )
+
+
+def _save_locate_debug_screenshot(xdisplay):
     os.makedirs(LOCATE_SCREENSHOT_DIR, exist_ok=True)
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     path = os.path.join(LOCATE_SCREENSHOT_DIR, 'locate-button-image-{0}.png'.format(timestamp))
-    pyautogui.screenshot().save(path)
+    _with_display(xdisplay, pyautogui.screenshot).save(path)
     return path
 
 
-def _raise_with_locate_debug_screenshot(error):
+def _raise_with_locate_debug_screenshot(error, xdisplay):
     try:
-        screenshot_path = _save_locate_debug_screenshot()
+        screenshot_path = _save_locate_debug_screenshot(xdisplay)
     except Exception as screenshot_error:
         raise AssertionError(
             '{0}\nUnable to save locate debug screenshot: {1!r}'.format(error, screenshot_error)
@@ -186,6 +314,16 @@ def _locate_button_image_path():
     if not os.path.exists(image_path):
         pytest.skip('Missing locate-button screenshot fixture: {0}'.format(image_path))
     return image_path
+
+
+def _with_display(xdisplay, func, *args, **kwargs):
+    if not xdisplay:
+        return func(*args, **kwargs)
+    previous_display = pyautogui.useXDisplay(xdisplay)
+    try:
+        return func(*args, **kwargs)
+    finally:
+        pyautogui.useXDisplay(previous_display)
 
 
 @GUI_TEST
@@ -207,21 +345,19 @@ class TestGuiAppIntegration(unittest.TestCase):
     def test_type_hello_world_in_input_text(self):
         with GuiTestAppProcess() as app:
             text_input = app.ready['widgets']['text_input']
-            pyautogui.click(text_input['center_x'], text_input['center_y'])
+            _with_display(app.pyautogui_display, pyautogui.click, text_input['center_x'], text_input['center_y'])
             time.sleep(0.25)
-            pyautogui.typewrite('hello world', interval=0.01)
+            _with_display(app.pyautogui_display, pyautogui.typewrite, 'hello world', interval=0.01)
 
             snapshot = _wait_for_text(app.process, app.stdout, 'hello world')
-
             self.assertEqual(snapshot['state']['text'], 'hello world')
 
     def test_click_button_increments_click_count(self):
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
-            pyautogui.click(click_target['center_x'], click_target['center_y'])
+            _with_display(app.pyautogui_display, pyautogui.click, click_target['center_x'], click_target['center_y'])
 
             event = _read_json_event(app.stdout, 'button_command', SNAPSHOT_TIMEOUT)
-
             self.assertEqual(event['widget'], 'click_target')
             self.assertEqual(event['state']['clicks'], 1)
             self.assertEqual(event['state']['status'], 'Button clicks: 1')
@@ -234,7 +370,7 @@ class TestGuiAppIntegration(unittest.TestCase):
         image_path = _locate_button_image_path()
         with GuiTestAppProcess() as app:
             click_target = app.ready['widgets']['click_target']
-            located_center = _wait_for_located_center(image_path)
+            located_center = _wait_for_located_center(image_path, app.pyautogui_display)
 
             self.assertLessEqual(abs(located_center.x - click_target['center_x']), LOCATE_CENTER_TOLERANCE)
             self.assertLessEqual(abs(located_center.y - click_target['center_y']), LOCATE_CENTER_TOLERANCE)
