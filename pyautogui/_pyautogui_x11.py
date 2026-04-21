@@ -197,10 +197,26 @@ _keyboardMapping = None
 _keyboardMappingDisplayName = None
 
 
+def _closeDisplay():
+    global _display_name, _display, _keyboardMapping, _keyboardMappingDisplayName
+    old_display = _display
+    _display_name = None
+    _display = None
+    _keyboardMapping = None
+    _keyboardMappingDisplayName = None
+
+    if old_display is not None:
+        try:
+            old_display.close()
+        except Exception:
+            pass
+
+
 def _setDisplayOverride(display_name):
     global _display_override
     previous_display = _display_override
     _display_override = display_name
+    _closeDisplay()
     return previous_display
 
 
@@ -210,15 +226,9 @@ def _getDisplay():
     if _display is not None and _display_name == display_name:
         return _display
 
-    old_display = _display
-    _display_name = display_name
+    _closeDisplay()
     _display = Display(display_name)
-
-    if old_display is not None:
-        try:
-            old_display.close()
-        except Exception:
-            pass
+    _display_name = display_name
 
     return _display
 

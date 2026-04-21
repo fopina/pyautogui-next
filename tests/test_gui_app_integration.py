@@ -110,6 +110,7 @@ class GuiTestAppProcess:
         self.stderr = _start_reader(self.process.stderr)
         self.ready = _read_ready_event(self.stdout, self.stderr, self.process)
         self.pyautogui_display = APP_XDISPLAY
+        _wait_for_pyautogui_display(self.pyautogui_display, self.stderr, self.process)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -251,6 +252,39 @@ def _wait_for_located_center(image_path, xdisplay):
     _raise_with_locate_debug_screenshot(
         AssertionError('Timed out locating image on screen: {0}. Last error: {1!r}'.format(image_path, last_error)),
         xdisplay,
+    )
+
+
+def _wait_for_pyautogui_display(xdisplay, stderr, process):
+    deadline = time.time() + READY_TIMEOUT
+    last_error = None
+    last_stderr = None
+    while time.time() < deadline:
+        try:
+            _with_display(xdisplay, pyautogui.size)
+            return
+        except Exception as exc:
+            last_error = exc
+        try:
+            last_stderr = stderr.get_nowait()
+        except queue.Empty:
+            pass
+        returncode = process.poll()
+        if returncode is not None:
+            raise AssertionError(
+                'GUI test app exited with {0} while waiting for X display {1}: {2}'.format(
+                    returncode,
+                    xdisplay,
+                    (last_stderr or '').strip(),
+                )
+            )
+        time.sleep(0.1)
+    raise AssertionError(
+        'Timed out waiting for X display {0}. Last error: {1!r}. Last stderr: {2!r}'.format(
+            xdisplay,
+            last_error,
+            last_stderr,
+        )
     )
 
 
